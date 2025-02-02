@@ -24,18 +24,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       try {
         const response = await fetch("/api/user", {
           headers: {
-            Authorization: `Bearer ${document.cookie.split("=")[1]}`, // Assuming the token is the only cookie
+            Authorization: `Bearer ${document.cookie.split("=")[1]}`,
           },
         })
         if (response.ok) {
           const userData = await response.json()
           setUser(userData)
         } else {
-          console.error("Error fetching user data:", response.statusText)
+          console.error("Erreur lors de la récupération des données utilisateur:", response.statusText)
           router.push("/auth/login")
         }
       } catch (error) {
-        console.error("Error fetching user data:", error)
+        console.error("Erreur lors de la récupération des données utilisateur:", error)
         router.push("/auth/login")
       }
     }
@@ -57,28 +57,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
             >
               <Users className="mr-3 h-5 w-5" />
-              Dashboard
+              Tableau de bord
             </Link>
             <Link
               href="/dashboard/students"
               className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
             >
               <GraduationCap className="mr-3 h-5 w-5" />
-              Students
+              Étudiants
             </Link>
             <Link
               href="/dashboard/professors"
               className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
             >
               <Users className="mr-3 h-5 w-5" />
-              Professors
+              Professeurs
             </Link>
             <Link
               href="/dashboard/schedules"
               className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
             >
               <Calendar className="mr-3 h-5 w-5" />
-              Schedules
+              Emplois du temps
             </Link>
           </div>
         </nav>
