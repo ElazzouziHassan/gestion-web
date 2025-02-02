@@ -25,12 +25,12 @@ export default function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       })
+      console.log('login has been done successfuly !')
 
       const data = await response.json()
 
       if (response.ok) {
-        // Use router.replace to prevent back navigation
-        router.replace("/dashboard")
+        router.push("/dashboard")
       } else {
         setError(data.error || "Login failed")
       }
