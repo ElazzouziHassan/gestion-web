@@ -43,7 +43,7 @@ export default function LoginForm() {
   return (
     <Card className="border-0 shadow-none">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-center text-gray-700">
+        <CardTitle className="text-xl font-semibold text-center text-gray-700">
           Connectez-vous à votre compte
         </CardTitle>
       </CardHeader>
