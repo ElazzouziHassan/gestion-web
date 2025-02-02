@@ -25,17 +25,16 @@ export default function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       })
-      console.log('login has been done successfuly !')
 
       const data = await response.json()
 
       if (response.ok) {
         router.push("/dashboard")
       } else {
-        setError(data.error || "Login failed")
+        setError(data.error || "Échec de la connexion")
       }
     } catch (error) {
-      setError("An error occurred during login")
+      setError("Une erreur s'est produite lors de la connexion")
     } finally {
       setIsLoading(false)
     }
@@ -44,7 +43,9 @@ export default function LoginForm() {
   return (
     <Card className="border-0 shadow-none">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-center text-gray-700">Login to Your Account</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-center text-gray-700">
+          Connectez-vous à votre compte
+        </CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -69,7 +70,7 @@ export default function LoginForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-              Password
+              Mot de passe
             </Label>
             <Input
               id="password"
@@ -88,7 +89,7 @@ export default function LoginForm() {
             disabled={isLoading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200"
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? "Connexion en cours..." : "Se connecter"}
           </Button>
         </CardFooter>
       </form>
