@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Users, GraduationCap, Calendar } from "lucide-react"
 import { UserCard } from "@/components/UserCard"
-import type React from "react" // Added import for React
+import type React from "react"
 
 type AdminUser = {
   firstName: string
@@ -20,12 +20,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<AdminUser | null>(null)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser")
-    if (storedUser) {
-      setUser(JSON.parse(storedUser))
-    } else {
-      router.push("/auth/login")
+    const fetchUser = async () => {
+      try {
+        const response = await fetch("/api/user", {
+          headers: {
+            Authorization: `Bearer ${document.cookie.split("=")[1]}`, // Assuming the token is the only cookie
+          },
+        })
+        if (response.ok) {
+          const userData = await response.json()
+          setUser(userData)
+        } else {
+          console.error("Error fetching user data:", response.statusText)
+          router.push("/auth/login")
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error)
+        router.push("/auth/login")
+      }
     }
+
+    fetchUser()
   }, [router])
 
   if (!user) {
