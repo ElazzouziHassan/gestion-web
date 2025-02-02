@@ -9,7 +9,7 @@ export default function RegisterPage() {
       ></div>
       <div className="relative z-10 w-full max-w-md px-4">
         <div className="bg-white rounded-lg shadow-xl p-8">
-          <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">Admin Registration</h1>
+          <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">Inscription Admin</h1>
           <RegisterForm />
         </div>
       </div>
