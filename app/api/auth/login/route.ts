@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
+import * as jose from "jose"
 import clientPromise from "@/lib/mongodb"
 import { DB_NAME } from "@/lib/config"
 
@@ -32,18 +32,19 @@ export async function POST(req: Request) {
       throw new Error("JWT_SECRET is not defined in the environment variables")
     }
 
+    const secretKey = new TextEncoder().encode(jwtSecret)
+
     // Create JWT token
-    const token = jwt.sign(
-      {
-        userId: user._id.toString(),
-        email: user.email,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-      },
-      jwtSecret,
-      { expiresIn: "1h" },
-    )
+    const token = await new jose.SignJWT({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("1h")
+      .sign(secretKey)
+
+    console.log("Login: Token created", { userId: user._id.toString(), email: user.email, role: user.role })
 
     // Create the response
     const response = NextResponse.json(
@@ -63,10 +64,12 @@ export async function POST(req: Request) {
     response.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== "development",
-      sameSite: "lax", // Changed from 'strict' to 'lax' to allow redirects
-      maxAge: 3600,
+      sameSite: "lax",
+      maxAge: 3600, // 1 hour
       path: "/",
     })
+
+    console.log("Login: Token set in cookie")
 
     return response
   } catch (error) {
