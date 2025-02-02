@@ -22,7 +22,7 @@ export default function RegisterForm() {
     setError("")
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match")
+      setError("Les mots de passe ne correspondent pas")
       return
     }
 
@@ -37,17 +37,17 @@ export default function RegisterForm() {
         router.push("/auth/login")
       } else {
         const data = await response.json()
-        setError(data.error || "Registration failed")
+        setError(data.error || "L'inscription a échoué")
       }
     } catch (error) {
-      setError("An error occurred during registration")
+      setError("Une erreur s'est produite lors de l'inscription")
     }
   }
 
   return (
     <Card className="border-0 shadow-none">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-center text-gray-700">Create an Admin Account</CardTitle>
+        <CardTitle className="text-2xl font-semibold text-center text-gray-700">Créer un compte Admin</CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -55,7 +55,7 @@ export default function RegisterForm() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
-                First Name
+                Prénom
               </Label>
               <Input
                 id="firstName"
@@ -67,7 +67,7 @@ export default function RegisterForm() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                Last Name
+                Nom
               </Label>
               <Input
                 id="lastName"
@@ -80,7 +80,7 @@ export default function RegisterForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="username" className="text-sm font-medium text-gray-700">
-              Username
+              Nom d'utilisateur
             </Label>
             <Input
               id="username"
@@ -105,7 +105,7 @@ export default function RegisterForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-              Password
+              Mot de passe
             </Label>
             <Input
               id="password"
@@ -118,7 +118,7 @@ export default function RegisterForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-              Confirm Password
+              Confirmer le mot de passe
             </Label>
             <Input
               id="confirmPassword"
@@ -135,7 +135,7 @@ export default function RegisterForm() {
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200"
           >
-            Register
+            S'inscrire
           </Button>
         </CardFooter>
       </form>
