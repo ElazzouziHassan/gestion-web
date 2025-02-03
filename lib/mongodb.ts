@@ -5,7 +5,6 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri: string = process.env.MONGODB_URI
-
 let client: MongoClient
 let clientPromise: Promise<MongoClient>
 
