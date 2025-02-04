@@ -24,14 +24,14 @@ export default function HomePage() {
                 Connexion
               </Button>
             </Link>
-            {/* <Link href="/auth/register">
+            <Link href="/auth/register">
               <Button
                 size="lg"
                 className="bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 text-lg px-8 py-3 rounded-full shadow-lg"
               >
                 S'inscrire
               </Button>
-            </Link> */}
+            </Link>
           </div>
           <p className="text-sm text-gray-300">
             Gérez efficacement les étudiants, les professeurs et les emplois du temps.
