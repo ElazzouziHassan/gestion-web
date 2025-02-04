@@ -1,0 +1,86 @@
+# mongo database :
+Admins :
+{
+  firstName: String,
+  lastName: String,
+  username: { type: String, default: function() { return this.email; } },
+  email: { type: String, unique: true },
+  password: String,
+  role: { type: String, enum: ["admin"], default: "admin" },
+  createdAt: { type: Date, default: Date.now }
+}
+Professors :
+{
+  firstName: String,
+  lastName: String,
+  email: { type: String, unique: true },
+  telephone: String,
+  role: { type: String, enum: ["professor"], default: "professor" },
+  status: { type: String, enum: ["permanent", "vacataire"], default: "vacataire" },
+  modules: [{ type: mongoose.Schema.Types.ObjectId, ref: "Module" }],
+  createdAt: { type: Date, default: Date.now }
+}
+Students:
+{
+  firstName: String,
+  lastName: String,
+  studentNumber: { type: String, unique: true },
+  role: { type: String, enum: ["student"], default: "student" },
+  cycle: { type: mongoose.Schema.Types.ObjectId, ref: "CycleMaster" },
+  currentSemester: { type: mongoose.Schema.Types.ObjectId, ref: "Semester" },
+  promo: String,
+  createdAt: { type: Date, default: Date.now }
+}
+Modules :
+{
+  title: String,
+  code: { type: String, unique: true },
+  cycle: { type: mongoose.Schema.Types.ObjectId, ref: "CycleMaster" },
+  semester: { type: mongoose.Schema.Types.ObjectId, ref: "Semester" }
+}
+Semesters :
+{
+  title: String,
+  startDate: Date,
+  endDate: Date,
+  modules: [{ type: mongoose.Schema.Types.ObjectId, ref: "Module" }]
+}
+Cycle Master :
+{
+  title: String,
+  major: String,
+  description: String,
+  duration: Number, // en années
+  status: { type: String, enum: ["active", "inactive"], default: "active" },
+  createdAt: { type: Date, default: Date.now }
+}
+Schedules :
+{
+  module: { type: mongoose.Schema.Types.ObjectId, ref: "Module" },
+  semester: { type: mongoose.Schema.Types.ObjectId, ref: "Semester" },
+  timetable: [
+    {
+      day: { type: String, enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+      time: String, // Ex: "08:00-10:00"
+      room: String
+    }
+  ],
+  schedule_pdf: String // URL du fichier PDF
+}
+Logs :
+{
+  userType: { type: String, enum: ["admin", "student", "professor"] },
+  user: { type: mongoose.Schema.Types.ObjectId, refPath: "userType" },
+  action: String,
+  details: String,
+  timestamp: { type: Date, default: Date.now }
+}
+Demandes :
+{
+  userType: { type: String, enum: ["student", "professor"] },
+  user: { type: mongoose.Schema.Types.ObjectId, refPath: "userType" },
+  description: String,
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}
