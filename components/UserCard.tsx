@@ -65,7 +65,6 @@ export function UserCard() {
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically send an API request to update the user's profile
     if (user) {
       try {
         const response = await fetch("/api/user", {
@@ -120,7 +119,10 @@ export function UserCard() {
                 {user.lastName[0]}
               </AvatarFallback>
             </Avatar>
-            <span className="text-sm font-medium">{user.email}</span>
+            <div className="flex flex-col items-start">
+              <span className="text-sm font-medium">{user.firstName+' '+lastName}</span>
+              <span className="text-xs text-gray-500">{user.role}</span>
+            </div>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
