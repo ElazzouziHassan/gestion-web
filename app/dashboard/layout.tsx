@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Users, GraduationCap, Calendar } from "lucide-react"
+import { Users, GraduationCap, Calendar, BookOpen, Layers, School } from "lucide-react"
 import { UserCard } from "@/components/UserCard"
 import type React from "react"
 
@@ -72,6 +72,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               <Users className="mr-3 h-5 w-5" />
               Professeurs
+            </Link>
+            <Link
+              href="/dashboard/modules"
+              className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
+            >
+              <BookOpen className="mr-3 h-5 w-5" />
+              Modules
+            </Link>
+            <Link
+              href="/dashboard/semesters"
+              className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
+            >
+              <Layers className="mr-3 h-5 w-5" />
+              Semestres
+            </Link>
+            <Link
+              href="/dashboard/cycle-masters"
+              className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
+            >
+              <School className="mr-3 h-5 w-5" />
+              Cycles Master
             </Link>
             <Link
               href="/dashboard/schedules"
