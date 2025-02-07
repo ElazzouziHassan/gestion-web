@@ -58,6 +58,7 @@ Schedules :
 {
   module: { type: mongoose.Schema.Types.ObjectId, ref: "Module" },
   semester: { type: mongoose.Schema.Types.ObjectId, ref: "Semester" },
+  for:{ type: mongoose.Schema.Types.ObjectId, ref: "professor", default:"student" },
   timetable: [
     {
       day: { type: String, enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
