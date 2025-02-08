@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs"
 import * as jose from "jose"
 import clientPromise from "@/lib/mongodb"
 import { DB_NAME } from "@/lib/config"
+import { logAction } from "@/lib/logAction"
 
 if (!process.env.JWT_SECRET) {
   throw new Error("Please add your JWT_SECRET to .env.local")
@@ -45,6 +46,9 @@ export async function POST(req: Request) {
       .sign(secretKey)
 
     console.log("Login: Token created", { userId: user._id.toString(), email: user.email, role: user.role })
+
+    // Log the login action
+    await logAction("admin", user._id.toString(), "login", `Admin logged in: ${user.email}`)
 
     // Create the response
     const response = NextResponse.json(
