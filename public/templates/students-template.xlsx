@@ -1,0 +1,4 @@
+// This is a placeholder for the Excel file content.
+// In reality, you would create an actual .xlsx file with the following columns:
+// firstName, lastName, email, studentNumber, cycleId, currentSemesterId, promo
+
