@@ -132,7 +132,7 @@ export default function LogsPage() {
                 {logs.map((log) => (
                   <TableRow key={log._id}>
                     <TableCell>{log.userType}</TableCell>
-                    <TableCell>{`${log.user.firstName} ${log.user.lastName} (${log.user.email})`}</TableCell>
+                    <TableCell>{`${log.user.firstName} ${log.user.lastName} `}</TableCell>
                     <TableCell>{log.action}</TableCell>
                     <TableCell>{log.details}</TableCell>
                     <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
