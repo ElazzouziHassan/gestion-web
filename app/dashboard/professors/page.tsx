@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MultiSelect } from "@/components/ui/multi-select"
-import { Plus, Download, Edit, Trash, MoreHorizontal } from "lucide-react"
+import { Plus, Download, Edit, Trash, MoreHorizontal, FileDown, Upload } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { generatePDF, generateExcel } from "@/lib/fileGenerators"
 import { useToast } from "@/hooks/use-toast"
 
 type Professor = {
@@ -54,6 +55,7 @@ export default function ProfessorsPage() {
     profilePicture: null,
   })
   const [editingProfessor, setEditingProfessor] = useState<Professor | null>(null)
+  const [isImportOpen, setIsImportOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -211,10 +213,50 @@ export default function ProfessorsPage() {
     }
   }
 
+  const handleDownload = async (format: "pdf" | "excel") => {
+    try {
+      if (format === "pdf") {
+        const pdfBlob = await generatePDF(professors, "Liste des Professeurs", [
+          "Prénom",
+          "Nom",
+          "Email",
+          "Téléphone",
+          "Statut",
+          "Modules"
+        ])
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "liste_professeurs.pdf"
+        a.click()
+      } else if (format === "excel") {
+        const excelBlob = await generateExcel(professors, "Liste des Professeurs")
+        const url = URL.createObjectURL(excelBlob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "liste_professeurs.xlsx"
+        a.click()
+      }
+      toast({
+        title: "Succès",
+        description: `Liste des professeurs téléchargée en ${format.toUpperCase()}.`,
+      })
+    } catch (error) {
+      console.error(`Erreur lors du téléchargement de la liste des professeurs en ${format.toUpperCase()}:`, error)
+      toast({
+        title: "Erreur",
+        description: `Impossible de télécharger la liste des professeurs en ${format.toUpperCase()}. Veuillez réessayer.`,
+        variant: "destructive",
+      })
+    }
+  }
+
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Gestion des Professeurs</h1>
+        <div className="flex gap-2">
         <Dialog open={isAddProfessorOpen} onOpenChange={setIsAddProfessorOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -299,6 +341,23 @@ export default function ProfessorsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">
+              <FileDown className="mr-2 h-4 w-4" />
+              Télécharger la liste
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => handleDownload("pdf")}>Télécharger en PDF</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleDownload("excel")}>Télécharger en Excel</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importer Excel
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -461,4 +520,3 @@ export default function ProfessorsPage() {
     </div>
   )
 }
-
