@@ -15,8 +15,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Download, Edit, Trash, MoreHorizontal } from "lucide-react"
+import { Plus, Download, Edit, Trash, MoreHorizontal, Upload, FileDown } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ExcelImport } from "@/components/excel-import"
+import { generatePDF, generateExcel } from "@/lib/fileGenerators"
 import { useToast } from "@/hooks/use-toast"
 
 type Student = {
@@ -69,6 +71,7 @@ export default function StudentsPage() {
     email: "",
   })
   const [editingStudent, setEditingStudent] = useState<EditingStudent | null>(null)
+  const [isImportOpen, setIsImportOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -244,115 +247,193 @@ export default function StudentsPage() {
     }
   }
 
+  const handleImport = async (data: any[]) => {
+    try {
+      const response = await fetch("/api/students/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        fetchStudents() 
+      }
+      return result
+    } catch (error) {
+      return {
+        success: false,
+        message: "Erreur lors de l'importation",
+        details: error instanceof Error ? error.message : "Une erreur inattendue s'est produite",
+      }
+    }
+  }
+
+  const handleDownload = async (format: "pdf" | "excel") => {
+    try {
+      if (format === "pdf") {
+        const pdfBlob = await generatePDF(students, "Liste des Étudiants", [
+          "Prénom",
+          "Nom",
+          "Numéro d'étudiant",
+          "Cycle",
+          "Semestre",
+          "Promotion",
+        ])
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "liste_etudiants.pdf"
+        a.click()
+      } else if (format === "excel") {
+        const excelBlob = await generateExcel(students, "Liste des Étudiants")
+        const url = URL.createObjectURL(excelBlob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "liste_etudiants.xlsx"
+        a.click()
+      }
+      toast({
+        title: "Succès",
+        description: `Liste des étudiants téléchargée en ${format.toUpperCase()}.`,
+      })
+    } catch (error) {
+      console.error(`Erreur lors du téléchargement de la liste des étudiants en ${format.toUpperCase()}:`, error)
+      toast({
+        title: "Erreur",
+        description: `Impossible de télécharger la liste des étudiants en ${format.toUpperCase()}. Veuillez réessayer.`,
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Gestion des Étudiants</h1>
-        <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Ajouter un Étudiant
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Ajouter un Nouvel Étudiant</DialogTitle>
-              <DialogDescription>Remplissez les informations de l'étudiant ci-dessous.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddStudent}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+        <div className="flex gap-2">
+          <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Ajouter un Étudiant
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Ajouter un Nouvel Étudiant</DialogTitle>
+                <DialogDescription>Remplissez les informations de l'étudiant ci-dessous.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAddStudent}>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName">Prénom</Label>
+                      <Input
+                        id="firstName"
+                        value={newStudent.firstName}
+                        onChange={(e) => setNewStudent({ ...newStudent, firstName: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="lastName">Nom</Label>
+                      <Input
+                        id="lastName"
+                        value={newStudent.lastName}
+                        onChange={(e) => setNewStudent({ ...newStudent, lastName: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
                   <div>
-                    <Label htmlFor="firstName">Prénom</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
-                      id="firstName"
-                      value={newStudent.firstName}
-                      onChange={(e) => setNewStudent({ ...newStudent, firstName: e.target.value })}
+                      id="email"
+                      type="email"
+                      value={newStudent.email}
+                      onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName">Nom</Label>
+                    <Label htmlFor="studentNumber">Numéro d'étudiant</Label>
                     <Input
-                      id="lastName"
-                      value={newStudent.lastName}
-                      onChange={(e) => setNewStudent({ ...newStudent, lastName: e.target.value })}
+                      id="studentNumber"
+                      value={newStudent.studentNumber}
+                      onChange={(e) => setNewStudent({ ...newStudent, studentNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cycleId">Cycle Master</Label>
+                    <Select
+                      value={newStudent.cycleId}
+                      onValueChange={(value) => setNewStudent({ ...newStudent, cycleId: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez un cycle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cycleMasters.map((cycle) => (
+                          <SelectItem key={cycle._id} value={cycle._id}>
+                            {cycle.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="currentSemesterId">Semestre actuel</Label>
+                    <Select
+                      value={newStudent.currentSemesterId}
+                      onValueChange={(value) => setNewStudent({ ...newStudent, currentSemesterId: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez un semestre" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {semesters.map((semester) => (
+                          <SelectItem key={semester._id} value={semester._id}>
+                            {semester.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="promo">Promotion</Label>
+                    <Input
+                      id="promo"
+                      value={newStudent.promo}
+                      onChange={(e) => setNewStudent({ ...newStudent, promo: e.target.value })}
                       required
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newStudent.email}
-                    onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="studentNumber">Numéro d'étudiant</Label>
-                  <Input
-                    id="studentNumber"
-                    value={newStudent.studentNumber}
-                    onChange={(e) => setNewStudent({ ...newStudent, studentNumber: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cycleId">Cycle Master</Label>
-                  <Select
-                    value={newStudent.cycleId}
-                    onValueChange={(value) => setNewStudent({ ...newStudent, cycleId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un cycle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cycleMasters.map((cycle) => (
-                        <SelectItem key={cycle._id} value={cycle._id}>
-                          {cycle.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="currentSemesterId">Semestre actuel</Label>
-                  <Select
-                    value={newStudent.currentSemesterId}
-                    onValueChange={(value) => setNewStudent({ ...newStudent, currentSemesterId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un semestre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {semesters.map((semester) => (
-                        <SelectItem key={semester._id} value={semester._id}>
-                          {semester.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="promo">Promotion</Label>
-                  <Input
-                    id="promo"
-                    value={newStudent.promo}
-                    onChange={(e) => setNewStudent({ ...newStudent, promo: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit">Ajouter l'Étudiant</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                  <Button type="submit">Ajouter l'Étudiant</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Télécharger la liste
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleDownload("pdf")}>Télécharger en PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownload("excel")}>Télécharger en Excel</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importer Excel
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -526,6 +607,13 @@ export default function StudentsPage() {
           )}
         </DialogContent>
       </Dialog>
+      <ExcelImport
+        entityName="étudiants"
+        onImport={handleImport}
+        templateName="students-template.xlsx"
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+      />
     </div>
   )
 }
