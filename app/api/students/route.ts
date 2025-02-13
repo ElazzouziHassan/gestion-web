@@ -69,6 +69,7 @@ export async function POST(req: Request) {
     const result = await db.collection("students").insertOne({
       firstName,
       lastName,
+      email,
       studentNumber,
       password: hashedPassword,
       role: "student",
