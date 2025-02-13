@@ -177,7 +177,6 @@ export default function Dashboard() {
         description: "Demande resolved and email sent successfully.",
       })
 
-      // Update the status of the resolved demande in the list
       setDemandeData((prevData) =>
         prevData.map((d) => (d._id === selectedDemande._id ? { ...d, status: "resolved" } : d)),
       )
@@ -209,7 +208,6 @@ export default function Dashboard() {
         description: "Demande deleted successfully.",
       })
 
-      // Remove the deleted demande from the list
       setDemandeData((prevData) => prevData.filter((d) => d._id !== id))
     } catch (error) {
       console.error("Error deleting demande:", error)
