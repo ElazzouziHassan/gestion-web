@@ -15,8 +15,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Upload, MoreHorizontal } from "lucide-react"
+import { Plus, Upload, MoreHorizontal, FileDown } from 'lucide-react'
 import * as XLSX from "xlsx"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { generatePDF, generateExcel } from "@/lib/fileGenerators"
 import { useToast } from "@/hooks/use-toast"
 
 type Module = {
@@ -178,11 +180,47 @@ export default function ModulesPage() {
     }
   }
 
+  const handleDownload = async (format: "pdf" | "excel") => {
+    try {
+      if (format === "pdf") {
+        const pdfBlob = await generatePDF(modules, "Liste des Modules", [
+          "Titre",
+          "Code",
+          "Cycle",
+          "Semestre"
+        ])
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "liste_modules.pdf"
+        a.click()
+      } else if (format === "excel") {
+        const excelBlob = await generateExcel(modules, "Liste des Modules")
+        const url = URL.createObjectURL(excelBlob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "liste_modules.xlsx"
+        a.click()
+      }
+      toast({
+        title: "Succès",
+        description: `Liste des modules téléchargée en ${format.toUpperCase()}.`,
+      })
+    } catch (error) {
+      console.error(`Erreur lors du téléchargement de la liste des modules en ${format.toUpperCase()}:`, error)
+      toast({
+        title: "Erreur",
+        description: `Impossible de télécharger la liste des modules en ${format.toUpperCase()}. Veuillez réessayer.`,
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Gestion des Modules</h1>
-        <div className="space-x-2">
+        <div className="flex gap-2">
           <Dialog open={isAddModuleOpen} onOpenChange={setIsAddModuleOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -258,6 +296,18 @@ export default function ModulesPage() {
               </form>
             </DialogContent>
           </Dialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Télécharger la liste
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleDownload("pdf")}>Télécharger en PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownload("excel")}>Télécharger en Excel</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Label htmlFor="file-upload" className="cursor-pointer">
             <div className="flex items-center space-x-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 rounded-md">
               <Upload className="h-5 w-5" />
@@ -308,4 +358,3 @@ export default function ModulesPage() {
     </div>
   )
 }
-
