@@ -39,7 +39,7 @@ export default function HomePage() {
         </div>
       </div>
       <footer className="absolute bottom-4 text-center text-gray-300 text-sm">
-        © 2023 Système de Gestion Universitaire. Tous droits réservés.
+        © 2025 Système de Gestion Universitaire. Tous droits réservés.
       </footer>
     </div>
   )
