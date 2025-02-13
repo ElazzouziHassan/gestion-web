@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Users, GraduationCap, Calendar, BookOpen, Layers, School, FileText } from "lucide-react"
+import { Users, GraduationCap, Calendar, BookOpen, Layers, School, FileSpreadsheet, LayoutDashboard, FileClock } from "lucide-react"
 import { UserCard } from "@/components/UserCard"
 import type React from "react"
 
@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href="/dashboard"
               className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
             >
-              <Users className="mr-3 h-5 w-5" />
+              <LayoutDashboard className="mr-3 h-5 w-5" />
               Tableau de bord
             </Link>
             <Link
@@ -102,10 +102,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               Emplois du temps
             </Link>
             <Link
+              href="/dashboard/documents"
+              className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
+            >
+              <FileSpreadsheet className="mr-3 h-5 w-5" />
+              Documents
+            </Link>
+            <Link
               href="/dashboard/logs"
               className="flex items-center py-2 px-4 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
             >
-              <FileText className="mr-3 h-5 w-5" />
+              <FileClock className="mr-3 h-5 w-5" />
               Logs
             </Link>
           </div>
