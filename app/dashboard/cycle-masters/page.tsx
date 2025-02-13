@@ -15,8 +15,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Upload } from "lucide-react"
+import { Plus, Upload, FileDown } from 'lucide-react'
 import * as XLSX from "xlsx"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { generatePDF, generateExcel } from "@/lib/fileGenerators"
+import { toast } from "@/hooks/use-toast"
 
 type CycleMaster = {
   _id: string
@@ -29,11 +32,13 @@ type CycleMaster = {
 export default function CycleMastersPage() {
   const [cycleMasters, setCycleMasters] = useState<CycleMaster[]>([])
   const [isAddCycleMasterOpen, setIsAddCycleMasterOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [newCycleMaster, setNewCycleMaster] = useState({
     title: "",
     major: "",
     description: "",
-    duration: 0, 
+    duration: 0,
   })
 
   useEffect(() => {
@@ -42,16 +47,24 @@ export default function CycleMastersPage() {
 
   const fetchCycleMasters = async () => {
     try {
-      const response = await fetch("/api/cycle-masters")
-      if (response.ok) {
-        const data = await response.json()
-        setCycleMasters(data)
-      } else {
-        const errorText = await response.text()
-        console.error("Error fetching cycle masters:", response.status, response.statusText, errorText)
+      setIsLoading(true)
+      setError(null)
+      const response = await fetch("/api/cycle-masters", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
-    } catch (error) {
-      console.error("Error fetching cycle masters:", error)
+      const data = await response.json()
+      setCycleMasters(data)
+    } catch (e) {
+      console.error("Error fetching cycle masters:", e)
+      setError("Failed to fetch cycle masters. Please try again later.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -63,20 +76,20 @@ export default function CycleMastersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCycleMaster),
       })
-      if (response.ok) {
-        setIsAddCycleMasterOpen(false)
-        fetchCycleMasters()
-        setNewCycleMaster({
-          title: "",
-          major: "",
-          description: "",
-          duration: 0, // Changed to number
-        })
-      } else {
-        console.error("Error adding cycle master:", response.statusText)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
-    } catch (error) {
-      console.error("Error adding cycle master:", error)
+      setIsAddCycleMasterOpen(false)
+      fetchCycleMasters()
+      setNewCycleMaster({
+        title: "",
+        major: "",
+        description: "",
+        duration: 0,
+      })
+    } catch (e) {
+      console.error("Error adding cycle master:", e)
+      setError("Failed to add cycle master. Please try again.")
     }
   }
 
@@ -85,35 +98,80 @@ export default function CycleMastersPage() {
     if (file) {
       const reader = new FileReader()
       reader.onload = async (e) => {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer)
-        const workbook = XLSX.read(data, { type: "array" })
-        const sheetName = workbook.SheetNames[0]
-        const worksheet = workbook.Sheets[sheetName]
-        const jsonData = XLSX.utils.sheet_to_json(worksheet)
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer)
+          const workbook = XLSX.read(data, { type: "array" })
+          const sheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[sheetName]
+          const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
-        for (const row of jsonData) {
-          try {
+          for (const row of jsonData) {
             await fetch("/api/cycle-masters", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(row),
             })
-          } catch (error) {
-            console.error("Error adding cycle master from Excel:", error)
           }
-        }
 
-        fetchCycleMasters()
+          fetchCycleMasters()
+        } catch (e) {
+          console.error("Error processing Excel file:", e)
+          setError("Failed to process Excel file. Please check the file format and try again.")
+        }
       }
       reader.readAsArrayBuffer(file)
     }
+  }
+
+  const handleDownload = async (format: "pdf" | "excel") => {
+    try {
+      if (format === "pdf") {
+        const pdfBlob = await generatePDF(cycleMasters, "Liste des Cycles Master", [
+          "Titre",
+          "Spécialité",
+          "Description",
+          "Durée"
+        ])
+        const url = URL.createObjectURL(pdfBlob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "liste_cycles_master.pdf"
+        a.click()
+      } else if (format === "excel") {
+        const excelBlob = await generateExcel(cycleMasters, "Liste des Cycles Master")
+        const url = URL.createObjectURL(excelBlob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "liste_cycles_master.xlsx"
+        a.click()
+      }
+      toast({
+        title: "Succès",
+        description: `Liste des cycles master téléchargée en ${format.toUpperCase()}.`,
+      })
+    } catch (error) {
+      console.error(`Erreur lors du téléchargement de la liste des cycles master en ${format.toUpperCase()}:`, error)
+      toast({
+        title: "Erreur",
+        description: `Impossible de télécharger la liste des cycles master en ${format.toUpperCase()}. Veuillez réessayer.`,
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (isLoading) {
+    return <div className="text-center py-10">Loading...</div>
+  }
+
+  if (error) {
+    return <div className="text-center py-10 text-red-500">{error}</div>
   }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Gestion des Cycles Master</h1>
-        <div className="space-x-2">
+        <div className="flex gap-2">
           <Dialog open={isAddCycleMasterOpen} onOpenChange={setIsAddCycleMasterOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -163,7 +221,7 @@ export default function CycleMastersPage() {
                       value={newCycleMaster.duration}
                       onChange={(e) =>
                         setNewCycleMaster({ ...newCycleMaster, duration: Number.parseInt(e.target.value, 10) })
-                      } // Parse as integer
+                      }
                       required
                     />
                   </div>
@@ -174,6 +232,18 @@ export default function CycleMastersPage() {
               </form>
             </DialogContent>
           </Dialog>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Télécharger la liste
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleDownload("pdf")}>Télécharger en PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownload("excel")}>Télécharger en Excel</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Label htmlFor="file-upload" className="cursor-pointer">
             <div className="flex items-center space-x-2 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 rounded-md">
               <Upload className="h-5 w-5" />
@@ -213,4 +283,3 @@ export default function CycleMastersPage() {
     </div>
   )
 }
-
