@@ -319,14 +319,14 @@ export default function SchedulesPage() {
                     >
                       {schedule.semesterTitle}
                     </Button>
-                    <Button
+                    {/* <Button
                       variant="outline"
                       size="icon"
                       onClick={() => handleDownload(schedule.schedule_pdf)}
                       disabled={!schedule.schedule_pdf}
                     >
                       <Download className="h-4 w-4" />
-                    </Button>
+                    </Button> */}
                   </div>
                 ))}
               </div>
