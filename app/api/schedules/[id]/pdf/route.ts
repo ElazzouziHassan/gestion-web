@@ -5,6 +5,16 @@ import { DB_NAME } from "@/lib/config"
 import jsPDF from "jspdf"
 import "jspdf-autotable"
 
+const frenchDays: { [key: string]: string } = {
+  Monday: "Lundi",
+  Tuesday: "Mardi",
+  Wednesday: "Mercredi",
+  Thursday: "Jeudi",
+  Friday: "Vendredi",
+  Saturday: "Samedi",
+  Sunday: "Dimanche",
+}
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const client = await clientPromise
@@ -95,7 +105,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
       // Combine all sessions for the day into a single row
       return [
-        daily.day,
+        frenchDays[daily.day] || daily.day, // Translate the day to French
         sessions.map((s: { module: any }) => s.module).join("\n"),
         sessions.map((s: { professor: any }) => s.professor).join("\n"),
         sessions.map((s: { timeSlot: any }) => s.timeSlot).join("\n"),
