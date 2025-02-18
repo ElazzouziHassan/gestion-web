@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     // Find user
     const user = await db.collection("admins").findOne({ email })
     if (!user) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 400 })
+      return NextResponse.json({ error: "User not found !" }, { status: 400 })
     }
 
     // Check password
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       .setExpirationTime("1h")
       .sign(secretKey)
 
-    console.log("Login: Token created", { userId: user._id.toString(), email: user.email, role: user.role })
+    // console.log("Login: Token created", { userId: user._id.toString(), email: user.email, role: user.role })
 
     // Log the login action
     await logAction("admin", user._id.toString(), "login", `Admin logged in: ${user.email}`)
