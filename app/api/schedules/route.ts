@@ -3,13 +3,17 @@ import clientPromise from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 import { DB_NAME } from "@/lib/config"
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const cycleMasterId = searchParams.get("cycleMaster")
+
   try {
     const client = await clientPromise
     const db = client.db(DB_NAME)
     const schedules = await db
       .collection("schedules")
       .aggregate([
+        ...(cycleMasterId ? [{ $match: { cycleMaster: new ObjectId(cycleMasterId) } }] : []),
         {
           $lookup: {
             from: "cycle_masters",
@@ -29,7 +33,7 @@ export async function GET() {
         {
           $lookup: {
             from: "modules",
-            localField: "dailySchedules.module",
+            localField: "dailySchedules.sessions.module",
             foreignField: "_id",
             as: "moduleInfo",
           },
@@ -37,45 +41,78 @@ export async function GET() {
         {
           $lookup: {
             from: "professors",
-            localField: "dailySchedules.professor",
+            localField: "dailySchedules.sessions.professor",
             foreignField: "_id",
             as: "professorInfo",
           },
         },
         {
           $project: {
-            cycleMaster: { $arrayElemAt: ["$cycleMasterInfo.title", 0] },
-            semester: { $arrayElemAt: ["$semesterInfo.title", 0] },
+            _id: 1,
+            cycleMaster: { $arrayElemAt: ["$cycleMasterInfo._id", 0] },
+            cycleMasterTitle: { $arrayElemAt: ["$cycleMasterInfo.title", 0] },
+            semester: { $arrayElemAt: ["$semesterInfo._id", 0] },
+            semesterTitle: { $arrayElemAt: ["$semesterInfo.title", 0] },
             dailySchedules: {
               $map: {
                 input: "$dailySchedules",
                 as: "daily",
                 in: {
                   day: "$$daily.day",
-                  module: {
-                    $arrayElemAt: [
-                      {
-                        $filter: {
-                          input: "$moduleInfo",
-                          cond: { $eq: ["$$this._id", "$$daily.module"] },
+                  sessions: {
+                    $map: {
+                      input: "$$daily.sessions",
+                      as: "session",
+                      in: {
+                        module: {
+                          $let: {
+                            vars: {
+                              moduleInfo: {
+                                $arrayElemAt: [
+                                  {
+                                    $filter: {
+                                      input: "$moduleInfo",
+                                      cond: { $eq: ["$$this._id", "$$session.module"] },
+                                    },
+                                  },
+                                  0,
+                                ],
+                              },
+                            },
+                            in: {
+                              _id: "$$moduleInfo._id",
+                              title: "$$moduleInfo.title",
+                              code: "$$moduleInfo.code",
+                            },
+                          },
                         },
-                      },
-                      0,
-                    ],
-                  },
-                  professor: {
-                    $arrayElemAt: [
-                      {
-                        $filter: {
-                          input: "$professorInfo",
-                          cond: { $eq: ["$$this._id", "$$daily.professor"] },
+                        professor: {
+                          $let: {
+                            vars: {
+                              professorInfo: {
+                                $arrayElemAt: [
+                                  {
+                                    $filter: {
+                                      input: "$professorInfo",
+                                      cond: { $eq: ["$$this._id", "$$session.professor"] },
+                                    },
+                                  },
+                                  0,
+                                ],
+                              },
+                            },
+                            in: {
+                              _id: "$$professorInfo._id",
+                              firstName: "$$professorInfo.firstName",
+                              lastName: "$$professorInfo.lastName",
+                            },
+                          },
                         },
+                        timeSlot: "$$session.timeSlot",
+                        place: "$$session.place",
                       },
-                      0,
-                    ],
+                    },
                   },
-                  time: "$$daily.time",
-                  place: "$$daily.place",
                 },
               },
             },
@@ -84,6 +121,7 @@ export async function GET() {
         },
       ])
       .toArray()
+
     return NextResponse.json(schedules)
   } catch (error) {
     console.error("Error fetching schedules:", error)
@@ -105,8 +143,11 @@ export async function POST(req: Request) {
     // Process daily schedules
     const processedSchedules = dailySchedules.map((daily) => ({
       ...daily,
-      module: daily.module ? new ObjectId(daily.module) : null,
-      professor: daily.professor ? new ObjectId(daily.professor) : null,
+      sessions: daily.sessions.map((session: { module: number; professor: number }) => ({
+        ...session,
+        module: session.module ? new ObjectId(session.module) : null,
+        professor: session.professor ? new ObjectId(session.professor) : null,
+      })),
     }))
 
     const result = await db.collection("schedules").insertOne({
@@ -141,7 +182,7 @@ export async function POST(req: Request) {
         {
           $lookup: {
             from: "modules",
-            localField: "dailySchedules.module",
+            localField: "dailySchedules.sessions.module",
             foreignField: "_id",
             as: "moduleInfo",
           },
@@ -149,7 +190,7 @@ export async function POST(req: Request) {
         {
           $lookup: {
             from: "professors",
-            localField: "dailySchedules.professor",
+            localField: "dailySchedules.sessions.professor",
             foreignField: "_id",
             as: "professorInfo",
           },
@@ -157,50 +198,69 @@ export async function POST(req: Request) {
         {
           $project: {
             _id: 1,
-            cycleMaster: { $arrayElemAt: ["$cycleMasterInfo.title", 0] },
-            semester: { $arrayElemAt: ["$semesterInfo.title", 0] },
+            cycleMaster: { $arrayElemAt: ["$cycleMasterInfo._id", 0] },
+            cycleMasterTitle: { $arrayElemAt: ["$cycleMasterInfo.title", 0] },
+            semester: { $arrayElemAt: ["$semesterInfo._id", 0] },
+            semesterTitle: { $arrayElemAt: ["$semesterInfo.title", 0] },
             dailySchedules: {
               $map: {
                 input: "$dailySchedules",
                 as: "daily",
                 in: {
                   day: "$$daily.day",
-                  module: {
-                    $cond: [
-                      { $eq: ["$$daily.module", null] },
-                      null,
-                      {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: "$moduleInfo",
-                              cond: { $eq: ["$$this._id", "$$daily.module"] },
+                  sessions: {
+                    $map: {
+                      input: "$$daily.sessions",
+                      as: "session",
+                      in: {
+                        module: {
+                          $let: {
+                            vars: {
+                              moduleInfo: {
+                                $arrayElemAt: [
+                                  {
+                                    $filter: {
+                                      input: "$moduleInfo",
+                                      cond: { $eq: ["$$this._id", "$$session.module"] },
+                                    },
+                                  },
+                                  0,
+                                ],
+                              },
+                            },
+                            in: {
+                              _id: "$$moduleInfo._id",
+                              title: "$$moduleInfo.title",
                             },
                           },
-                          0,
-                        ],
-                      },
-                    ],
-                  },
-                  professor: {
-                    $cond: [
-                      { $eq: ["$$daily.professor", null] },
-                      null,
-                      {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: "$professorInfo",
-                              cond: { $eq: ["$$this._id", "$$daily.professor"] },
+                        },
+                        professor: {
+                          $let: {
+                            vars: {
+                              professorInfo: {
+                                $arrayElemAt: [
+                                  {
+                                    $filter: {
+                                      input: "$professorInfo",
+                                      cond: { $eq: ["$$this._id", "$$session.professor"] },
+                                    },
+                                  },
+                                  0,
+                                ],
+                              },
+                            },
+                            in: {
+                              _id: "$$professorInfo._id",
+                              firstName: "$$professorInfo.firstName",
+                              lastName: "$$professorInfo.lastName",
                             },
                           },
-                          0,
-                        ],
+                        },
+                        timeSlot: "$$session.timeSlot",
+                        place: "$$session.place",
                       },
-                    ],
+                    },
                   },
-                  time: "$$daily.time",
-                  place: "$$daily.place",
                 },
               },
             },
