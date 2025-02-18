@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,6 +36,7 @@ type Semester = {
 type Module = {
   _id: string
   title: string
+  code: string
 }
 
 type Professor = {
@@ -45,8 +48,16 @@ type Professor = {
 type DailySchedule = {
   day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
   sessions: Array<{
-    module: string
-    professor: string
+    module: {
+      _id: string
+      title: string
+      code: string
+    }
+    professor: {
+      _id: string
+      firstName: string
+      lastName: string
+    }
     timeSlot: string
     place: string
   }>
@@ -111,15 +122,7 @@ export default function SchedulesPage() {
           professorsRes.json(),
         ])
 
-        // Add cycleMasterTitle and semesterTitle to each schedule
-        const updatedSchedules = schedulesData.map((schedule: Schedule) => ({
-          ...schedule,
-          cycleMasterTitle:
-            cycleMastersData.find((cm: CycleMaster) => cm._id === schedule.cycleMaster)?.title || "Cycle inconnu",
-          semesterTitle: semestersData.find((s: Semester) => s._id === schedule.semester)?.title || "Semestre inconnu",
-        }))
-
-        setSchedules(updatedSchedules)
+        setSchedules(schedulesData)
         setCycleMasters(cycleMastersData)
         setSemesters(semestersData)
         setModules(modulesData)
@@ -199,7 +202,15 @@ export default function SchedulesPage() {
           schedule.day === day
             ? {
                 ...schedule,
-                sessions: [...schedule.sessions, { module: "", professor: "", timeSlot: "", place: "" }],
+                sessions: [
+                  ...schedule.sessions,
+                  {
+                    module: { _id: "", title: "", code: "" },
+                    professor: { _id: "", firstName: "", lastName: "" },
+                    timeSlot: "",
+                    place: "",
+                  },
+                ],
               }
             : schedule,
         ) || [],
@@ -227,7 +238,7 @@ export default function SchedulesPage() {
     day: string,
     sessionIndex: number,
     field: keyof DailySchedule["sessions"][0],
-    value: string,
+    value: string | { _id: string; title: string; code: string } | { _id: string; firstName: string; lastName: string },
   ) => {
     setNewSchedule((prev) => ({
       ...prev,
@@ -269,14 +280,12 @@ export default function SchedulesPage() {
     setSelectedSchedule(schedule)
   }
 
-  const getModuleTitle = (moduleId: string) => {
-    const module = modules.find((m) => m._id === moduleId)
-    return module ? module.title : "Module inconnu"
+  const getModuleDisplay = (module: { title: string; code: string }) => {
+    return `${module.code} - ${module.title}`
   }
 
-  const getProfessorName = (professorId: string) => {
-    const professor = professors.find((p) => p._id === professorId)
-    return professor ? `${professor.firstName} ${professor.lastName}` : "Professeur inconnu"
+  const getProfessorName = (professor: { firstName: string; lastName: string }) => {
+    return `${professor.firstName} ${professor.lastName}`
   }
 
   const ScheduleList = ({ schedules }: { schedules: Schedule[] }) => {
@@ -331,6 +340,57 @@ export default function SchedulesPage() {
   const ScheduleDetailsDialog = ({ schedule, onClose }: { schedule: Schedule | null; onClose: () => void }) => {
     if (!schedule) return null
 
+    const handleDownloadPDF = async () => {
+      try {
+        const response = await fetch(`/api/schedules/${schedule._id}/pdf`)
+        if (!response.ok) throw new Error("Failed to generate PDF")
+
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `emploi_du_temps_${schedule.cycleMasterTitle}_${schedule.semesterTitle}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } catch (error) {
+        console.error("Error downloading PDF:", error)
+        toast({
+          title: "Erreur",
+          description: "Impossible de télécharger le PDF. Veuillez réessayer.",
+          variant: "destructive",
+        })
+      }
+    }
+
+    // Group sessions by day and combine them into a single cell
+    const formatDailySessions = (sessions: any[]) => {
+      return (
+        <div className="space-y-1">
+          {sessions.map((session, index) => (
+            <div key={index} className="text-sm">
+              <div>
+                <span className="font-medium">{session.timeSlot}</span> -{" "}
+                <span className="text-muted-foreground">Salle {session.place}</span>
+              </div>
+              <div className="text-primary">
+                {session.module.code && session.module.title
+                  ? `${session.module.code} - ${session.module.title}`
+                  : "Module non défini"}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {session.professor.firstName && session.professor.lastName
+                  ? `${session.professor.firstName} ${session.professor.lastName}`
+                  : "Professeur non défini"}
+              </div>
+              {index < sessions.length - 1 && <div className="my-2 border-t border-border" />}
+            </div>
+          ))}
+        </div>
+      )
+    }
+
     return (
       <Dialog open={!!schedule} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -343,44 +403,22 @@ export default function SchedulesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Jour</TableHead>
-                  <TableHead>Module</TableHead>
-                  <TableHead>Professeur</TableHead>
-                  <TableHead>Horaire</TableHead>
-                  <TableHead>Salle</TableHead>
+                  <TableHead className="w-[100px]">Jour</TableHead>
+                  <TableHead>Sessions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {schedule.dailySchedules.map((daily) => (
                   <TableRow key={daily.day}>
-                    <TableCell className="font-medium">{daily.day}</TableCell>
-                    <TableCell>
-                      {daily.sessions.map((session, index) => (
-                        <div key={index}>{getModuleTitle(session.module)}</div>
-                      ))}
-                    </TableCell>
-                    <TableCell>
-                      {daily.sessions.map((session, index) => (
-                        <div key={index}>{getProfessorName(session.professor)}</div>
-                      ))}
-                    </TableCell>
-                    <TableCell>
-                      {daily.sessions.map((session, index) => (
-                        <div key={index}>{session.timeSlot}</div>
-                      ))}
-                    </TableCell>
-                    <TableCell>
-                      {daily.sessions.map((session, index) => (
-                        <div key={index}>{session.place}</div>
-                      ))}
-                    </TableCell>
+                    <TableCell className="font-medium align-top">{daily.day}</TableCell>
+                    <TableCell>{formatDailySessions(daily.sessions)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
           <DialogFooter>
-            <Button onClick={() => handleDownload(schedule.schedule_pdf)} disabled={!schedule.schedule_pdf}>
+            <Button onClick={handleDownloadPDF}>
               <Download className="mr-2 h-4 w-4" /> Télécharger PDF
             </Button>
           </DialogFooter>
@@ -499,8 +537,15 @@ export default function SchedulesPage() {
                                   <div>
                                     <Label>Module</Label>
                                     <Select
-                                      value={session.module}
-                                      onValueChange={(value) => updateSession(day, sessionIndex, "module", value)}
+                                      value={session.module._id}
+                                      onValueChange={(value) =>
+                                        updateSession(
+                                          day,
+                                          sessionIndex,
+                                          "module",
+                                          modules.find((m) => m._id === value) || { _id: "", title: "", code: "" },
+                                        )
+                                      }
                                     >
                                       <SelectTrigger>
                                         <SelectValue placeholder="Sélectionner un module" />
@@ -508,7 +553,7 @@ export default function SchedulesPage() {
                                       <SelectContent>
                                         {modules.map((module) => (
                                           <SelectItem key={module._id} value={module._id}>
-                                            {module.title}
+                                            {`${module.code} - ${module.title}`}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -518,9 +563,20 @@ export default function SchedulesPage() {
                                   <div>
                                     <Label>Professeur</Label>
                                     <Select
-                                      value={session.professor}
-                                      onValueChange={(value) => updateSession(day, sessionIndex, "professor", value)}
-                                      disabled={!session.module}
+                                      value={session.professor._id}
+                                      onValueChange={(value) =>
+                                        updateSession(
+                                          day,
+                                          sessionIndex,
+                                          "professor",
+                                          professors.find((p) => p._id === value) || {
+                                            _id: "",
+                                            firstName: "",
+                                            lastName: "",
+                                          },
+                                        )
+                                      }
+                                      disabled={!session.module._id}
                                     >
                                       <SelectTrigger>
                                         <SelectValue placeholder="Sélectionner un professeur" />
@@ -540,7 +596,7 @@ export default function SchedulesPage() {
                                     <Select
                                       value={session.timeSlot}
                                       onValueChange={(value) => updateSession(day, sessionIndex, "timeSlot", value)}
-                                      disabled={!session.module}
+                                      disabled={!session.module._id}
                                     >
                                       <SelectTrigger>
                                         <SelectValue placeholder="Sélectionner un horaire" />
@@ -565,7 +621,7 @@ export default function SchedulesPage() {
                                       value={session.place}
                                       onChange={(e) => updateSession(day, sessionIndex, "place", e.target.value)}
                                       placeholder="Ex: Salle 21"
-                                      disabled={!session.module}
+                                      disabled={!session.module._id}
                                     />
                                   </div>
                                 </div>
@@ -600,8 +656,8 @@ export default function SchedulesPage() {
                             {schedule?.sessions.length ? (
                               <div className="grid gap-1">
                                 {schedule.sessions.map((session, index) => {
-                                  const module = modules.find((m) => m._id === session.module)
-                                  const professor = professors.find((p) => p._id === session.professor)
+                                  const module = modules.find((m) => m._id === session.module._id)
+                                  const professor = professors.find((p) => p._id === session.professor._id)
                                   const timeSlot = TIME_SLOTS.find((t) => t.time === session.timeSlot)
 
                                   return (
@@ -611,7 +667,7 @@ export default function SchedulesPage() {
                                     >
                                       {module?.title ? (
                                         <>
-                                          {module.title} -{" "}
+                                          {`${module.code} - ${module.title}`} -{" "}
                                           {professor ? `${professor.firstName} ${professor.lastName}` : "Non assigné"}
                                           {timeSlot ? ` (${timeSlot.label})` : ""}
                                           {session.place ? ` - ${session.place}` : ""}
