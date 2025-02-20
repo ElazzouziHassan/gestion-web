@@ -66,7 +66,7 @@ backend:
 
 ### ⚡ Utilisation:
 
-Configurer Les Variables d'Environnement: Créez un fichier .env.local dans le répertoire racine et ajoutez les variables d'environnement suivantes:
+Configurer Les Variables d'Environnement: Créez un fichier *.env.local* dans le répertoire racine et ajoutez les variables d'environnement suivantes:
 
 ```xml
   MONGODB_URI=<Your mongoDB URL>
