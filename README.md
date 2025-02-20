@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Application de Gestion des Cycles de Master - WEB
 
-## Getting Started
+![GPE](public/banner.png)
+## Introduction
+Cette application a été conçue pour faciliter la gestion des cycles de master à la Faculté des Sciences de l'Université Chouaib Doukkali.
 
-First, run the development server:
+Grâce à une architecture moderne et une intégration web et mobile, cette solution vise à améliorer l'organisation et la communication au sein de l’université.
+![cover](./public/dash.png)
+## Table of Contents
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- [Introduction](#introduction)
+- [Objectifs](#Objectifs)
+- [Architecture et Technologies](#Architecturetechnologies)
+- [Installation et Exécution](#InstallationetExécution)
+- [Authentification et Rôles](#AuthentificationetRôles)
+- [Améliorations et Évolutions Futures](#AméliorationsetÉvolutionsFutures)
+- [License](#license)
+
+## 🎯 Objectifs
+- **Centraliser et automatiser** la gestion des Cycles de Master.
+- **Tableau de Board**: Ofrir une tableau de board pour les agents administartifs.
+- Assurer une **accessibilité** fluide via une **application** *web* et *mobile*.
+- **Sécuriser** l’accès aux données grâce à des *rôles* et *permissions* définis.
+- Faciliter la **communication** entre les différents acteurs académiques.
+## 🏗 Architecture et Technologies
+L’application repose sur une architecture modulaire intégrant plusieurs technologies modernes :
+![Architecture](./public/architecture.png)
+📌 Frontend (Web):
+- **Next.js (React)** → Interface web pour l'administration.
+- **Chad/ cn + Tailwind CSS** → UI moderne et responsive.
+📌 Backend
+- **Next js (Node js)** → API REST pour gérer les données.
+- **JWT (jose)** → Sécurisation de l’authentification des utilisateurs.
+- **Bcrypt.js** → Chiffrement des mots de passe.
+📌 Base de données
+- **MongoDB (MongoDB Atlas)** → Stockage des données académiques (étudiants, professeurs, modules, etc.).
+📌 Déploiement
+- **Vercel** → Hébergement du backend + frontend(web).
+*Other options: Heroku / AWS*
+## ⚙ Installation et Exécution:
+**🛠 Prérequis**:
+- Node.js (>= 16.x)
+- MongoDB (local ou MongoDB Atlas)
+- Git
+**📥 Cloner le projet**:
+backend:
+```xml
+  SSH : git@github.com:ElazzouziHassan/gestion-web.git
+  HTTPS : https://github.com/ElazzouziHassan/gestion-web.git
 ```
+### 🚀 Installation des dépendances:
+*📌 Backend*:
+```xml
+  cd gestion-web
+  npm install
+```
+*Visiter https://ui.shadcn.com/docs/installation/next pour configurer chad/ cn*
+### ⚡ Utilisation:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**📌 Lancement du backend**
+```xml
+  npm run dev
+```
+L’API + dashboard est accessible sur http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🔐 Authentification et Rôles:
+L'application gère plusieurs niveaux d’accès :
 
-## Learn More
+![Rôles](./public/roles.png)
 
-To learn more about Next.js, take a look at the following resources:
+- 👨‍💼 Administrateurs : gestion complète.
+- 👨‍🏫 Professeurs : accès aux modules enseignés et list des étudiants...
+- 🎓 Étudiants : consultation des emplois du temps et list des modules...
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+L’authentification se fait via JWT, et chaque utilisateur possède un rôle défini.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 Améliorations et Évolutions Futures:
 
-## Deploy on Vercel
+- 🔹 Gestion des examens et des notes.
+- 🔹 Suivi des absences et des présences.
+- 🔹 Optimisation de l’interface utilisateur (UI/UX).
+- 🔹 Intégration avec d’autres systèmes académiques.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📜 Licence:
+Ce projet est sous licence [Wizardy](LICENSE.md). Vous êtes libre de l’utiliser et de le modifier selon vos besoins.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+💡 Besoin d’aide ? Contactez-nous à : ezhassan.info@gmail.com 🚀
+
