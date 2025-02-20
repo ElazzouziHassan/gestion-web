@@ -140,13 +140,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid input data" }, { status: 400 })
     }
 
+    // Check if a schedule already exists for this semester
+    const existingSchedule = await db.collection("schedules").findOne({ semester: new ObjectId(semester) })
+
+    if (existingSchedule) {
+      return NextResponse.json(
+        { error: "A schedule already exists for this semester. Please update the existing schedule instead." },
+        { status: 409 },
+      )
+    }
+
     // Process daily schedules
     const processedSchedules = dailySchedules.map((daily) => ({
       ...daily,
-      sessions: daily.sessions.map((session: { module: number; professor: number }) => ({
+      sessions: daily.sessions.map((session: { module: { _id: number }; professor: { _id: number } }) => ({
         ...session,
-        module: session.module ? new ObjectId(session.module) : null,
-        professor: session.professor ? new ObjectId(session.professor) : null,
+        module: session.module?._id ? new ObjectId(session.module._id) : null,
+        professor: session.professor?._id ? new ObjectId(session.professor._id) : null,
       })),
     }))
 
@@ -231,6 +241,7 @@ export async function POST(req: Request) {
                             in: {
                               _id: "$$moduleInfo._id",
                               title: "$$moduleInfo.title",
+                              code: "$$moduleInfo.code",
                             },
                           },
                         },
