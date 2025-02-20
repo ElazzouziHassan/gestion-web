@@ -9,7 +9,7 @@ import * as jose from "jose"
 import { createPdf } from "@/lib/pdfGenerator"
 
 function generatePassword(firstName: string, lastName: string): string {
-  return `${firstName.charAt(0).toLowerCase()}${lastName.charAt(0).toLowerCase()}${'.prof@123'}`
+  return `pass123`
 }
 
 export async function GET() {
