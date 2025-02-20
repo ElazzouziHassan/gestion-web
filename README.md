@@ -25,23 +25,30 @@ Grâce à une architecture moderne et une intégration web et mobile, cette solu
 ## 🏗 Architecture et Technologies
 L’application repose sur une architecture modulaire intégrant plusieurs technologies modernes :
 ![Architecture](./public/architecture.png)
-📌 Frontend (Web):
+
+*📌 Frontend (Web)*:
 - **Next.js (React)** → Interface web pour l'administration.
 - **Chad/ cn + Tailwind CSS** → UI moderne et responsive.
-📌 Backend
+
+*📌 Backend*:
 - **Next js (Node js)** → API REST pour gérer les données.
 - **JWT (jose)** → Sécurisation de l’authentification des utilisateurs.
 - **Bcrypt.js** → Chiffrement des mots de passe.
-📌 Base de données
+
+*📌 Base de données*:
 - **MongoDB (MongoDB Atlas)** → Stockage des données académiques (étudiants, professeurs, modules, etc.).
-📌 Déploiement
+
+*📌 Déploiement*:
 - **Vercel** → Hébergement du backend + frontend(web).
 *Other options: Heroku / AWS*
+
 ## ⚙ Installation et Exécution:
+
 **🛠 Prérequis**:
 - Node.js (>= 16.x)
 - MongoDB (local ou MongoDB Atlas)
 - Git
+
 **📥 Cloner le projet**:
 backend:
 ```xml
@@ -49,12 +56,14 @@ backend:
   HTTPS : https://github.com/ElazzouziHassan/gestion-web.git
 ```
 ### 🚀 Installation des dépendances:
+
 *📌 Backend*:
 ```xml
   cd gestion-web
   npm install
 ```
 *Visiter https://ui.shadcn.com/docs/installation/next pour configurer chad/ cn*
+
 ### ⚡ Utilisation:
 
 **📌 Lancement du backend**
@@ -63,8 +72,8 @@ backend:
 ```
 L’API + dashboard est accessible sur http://localhost:3000.
 
-
 ## 🔐 Authentification et Rôles:
+
 L'application gère plusieurs niveaux d’accès :
 
 ![Rôles](./public/roles.png)
