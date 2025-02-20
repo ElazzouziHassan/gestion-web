@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +42,7 @@ type Professor = {
   _id: string
   firstName: string
   lastName: string
+  modules: string[]
 }
 
 type DailySchedule = {
@@ -102,6 +102,7 @@ export default function SchedulesPage() {
   const [activeDay, setActiveDay] = useState<string>("Monday")
   const [timeConflicts, setTimeConflicts] = useState<{ [key: string]: boolean }>({})
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
+  const [filteredModules, setFilteredModules] = useState<Module[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -127,6 +128,7 @@ export default function SchedulesPage() {
         setSemesters(semestersData)
         setModules(modulesData)
         setProfessors(professorsData)
+        setFilteredModules(modulesData)
       } catch (error) {
         console.error("Erreur lors de la récupération des données:", error)
         toast({
@@ -141,6 +143,7 @@ export default function SchedulesPage() {
     fetchData()
   }, [])
 
+  // Update the handleAddSchedule function to handle the 409 error
   const handleAddSchedule = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newSchedule.cycleMaster || !newSchedule.semester) {
@@ -159,6 +162,7 @@ export default function SchedulesPage() {
         },
         body: JSON.stringify(newSchedule),
       })
+
       if (response.ok) {
         const addedSchedule = await response.json()
         setSchedules((prev) => [...prev, addedSchedule])
@@ -171,6 +175,14 @@ export default function SchedulesPage() {
         toast({
           title: "Succès",
           description: "Emploi du temps ajouté avec succès",
+        })
+      } else if (response.status === 409) {
+        const data = await response.json()
+        toast({
+          title: "Emploi du temps existant",
+          description:
+            "Un emploi du temps existe déjà pour ce cycle master et ce semestre. Veuillez modifier l'emploi du temps existant.",
+          variant: "destructive",
         })
       } else {
         const errorData = await response.json()
@@ -187,13 +199,11 @@ export default function SchedulesPage() {
     }
   }
 
-  // Function to check if a time slot is available
   const isTimeSlotAvailable = (day: string, timeSlot: string) => {
     const daySchedule = newSchedule.dailySchedules?.find((s) => s.day === day)
     return !daySchedule?.sessions.some((session) => session.timeSlot === timeSlot)
   }
 
-  // Function to add a session to a day
   const addSession = (day: string) => {
     setNewSchedule((prev) => ({
       ...prev,
@@ -217,7 +227,6 @@ export default function SchedulesPage() {
     }))
   }
 
-  // Function to remove a session
   const removeSession = (day: string, sessionIndex: number) => {
     setNewSchedule((prev) => ({
       ...prev,
@@ -233,7 +242,6 @@ export default function SchedulesPage() {
     }))
   }
 
-  // Function to update a session
   const updateSession = (
     day: string,
     sessionIndex: number,
@@ -254,6 +262,17 @@ export default function SchedulesPage() {
             : schedule,
         ) || [],
     }))
+
+
+    // uncomment this bellow and fix it to give you only the modules asigned to the selected professor!
+
+    // if (field === "professor" && typeof value === "object" && "_id" in value) {
+    //   const selectedProfessor = professors.find((p) => p._id === value._id)
+    //   if (selectedProfessor) {
+    //     const professorModules = modules.filter((m) => selectedProfessor.modules.includes(m._id))
+    //     setFilteredModules(professorModules)
+    //   }
+    // }
   }
 
   const handleDownload = (pdfUrl: string | null) => {
@@ -263,7 +282,6 @@ export default function SchedulesPage() {
       toast({
         title: "Erreur",
         description: "Aucun fichier PDF trouvé pour cet emploi du temps.",
-        // variant: "warning",
       })
     }
   }
@@ -319,14 +337,6 @@ export default function SchedulesPage() {
                     >
                       {schedule.semesterTitle}
                     </Button>
-                    {/* <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleDownload(schedule.schedule_pdf)}
-                      disabled={!schedule.schedule_pdf}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button> */}
                   </div>
                 ))}
               </div>
@@ -364,7 +374,6 @@ export default function SchedulesPage() {
       }
     }
 
-    // Group sessions by day and combine them into a single cell
     const formatDailySessions = (sessions: any[]) => {
       return (
         <div className="space-y-1">
@@ -535,32 +544,6 @@ export default function SchedulesPage() {
                               <CardContent className="p-4 pt-0">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
-                                    <Label>Module</Label>
-                                    <Select
-                                      value={session.module._id}
-                                      onValueChange={(value) =>
-                                        updateSession(
-                                          day,
-                                          sessionIndex,
-                                          "module",
-                                          modules.find((m) => m._id === value) || { _id: "", title: "", code: "" },
-                                        )
-                                      }
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Sélectionner un module" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {modules.map((module) => (
-                                          <SelectItem key={module._id} value={module._id}>
-                                            {`${module.code} - ${module.title}`}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-
-                                  <div>
                                     <Label>Professeur</Label>
                                     <Select
                                       value={session.professor._id}
@@ -576,7 +559,6 @@ export default function SchedulesPage() {
                                           },
                                         )
                                       }
-                                      disabled={!session.module._id}
                                     >
                                       <SelectTrigger>
                                         <SelectValue placeholder="Sélectionner un professeur" />
@@ -585,6 +567,37 @@ export default function SchedulesPage() {
                                         {professors.map((professor) => (
                                           <SelectItem key={professor._id} value={professor._id}>
                                             {`${professor.firstName} ${professor.lastName}`}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  <div>
+                                    <Label>Module</Label>
+                                    <Select
+                                      value={session.module._id}
+                                      onValueChange={(value) =>
+                                        updateSession(
+                                          day,
+                                          sessionIndex,
+                                          "module",
+                                          filteredModules.find((m) => m._id === value) || {
+                                            _id: "",
+                                            title: "",
+                                            code: "",
+                                          },
+                                        )
+                                      }
+                                      disabled={!session.professor._id}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Sélectionner un module" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {filteredModules.map((module) => (
+                                          <SelectItem key={module._id} value={module._id}>
+                                            {`${module.code} - ${module.title}`}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
