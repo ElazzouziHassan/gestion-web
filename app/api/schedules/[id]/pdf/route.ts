@@ -15,15 +15,18 @@ const frenchDays: { [key: string]: string } = {
   Sunday: "Dimanche",
 }
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, context: { params: { id: string } }) {
   try {
+    // Destructure and await the params
+    const { id } = context.params
+
     const client = await clientPromise
     const db = client.db(DB_NAME)
 
     const schedule = await db
       .collection("schedules")
       .aggregate([
-        { $match: { _id: new ObjectId(params.id) } },
+        { $match: { _id: new ObjectId(id) } },
         {
           $lookup: {
             from: "cycle_masters",
@@ -72,8 +75,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Schedule not found" }, { status: 404 })
     }
 
-    // Create PDF
-    const doc = new jsPDF()
+    // Create PDF with adjusted page size and margins
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    })
 
     // Add title
     doc.setFontSize(16)
@@ -103,9 +110,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         },
       )
 
-      // Combine all sessions for the day into a single row
       return [
-        frenchDays[daily.day] || daily.day, // Translate the day to French
+        frenchDays[daily.day] || daily.day,
         sessions.map((s: { module: any }) => s.module).join("\n"),
         sessions.map((s: { professor: any }) => s.professor).join("\n"),
         sessions.map((s: { timeSlot: any }) => s.timeSlot).join("\n"),
@@ -113,7 +119,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       ]
     })
 
-    // Add table
+    // Add table with adjusted column widths and styling
     doc.autoTable({
       startY: 25,
       head: [["Jour", "Module", "Professeur", "Horaire", "Salle"]],
@@ -121,35 +127,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       theme: "grid",
       headStyles: { fillColor: [41, 128, 185], textColor: 255 },
       styles: {
-        fontSize: 10,
-        cellPadding: 3,
+        fontSize: 8,
+        cellPadding: 2,
         overflow: "linebreak",
-        cellWidth: "wrap",
       },
       columnStyles: {
         0: { cellWidth: 30 }, // Jour
-        1: { cellWidth: 40 }, // Module
-        2: { cellWidth: 40 }, // Professeur
-        3: { cellWidth: 30 }, // Horaire
+        1: { cellWidth: 50 }, // Module
+        2: { cellWidth: 50 }, // Professeur
+        3: { cellWidth: 40 }, // Horaire
         4: { cellWidth: 30 }, // Salle
       },
-    })
-
-    // Add module descriptions
-    const uniqueModules = Array.from(new Set(schedule.moduleInfo.map((m: { code: any }) => m.code)))
-    const moduleDescriptions = uniqueModules.map((code: any) => {
-      const module = schedule.moduleInfo.find((m: { code: any }) => m.code === code)
-      return `${code}: ${module.title}`
-    })
-
-    doc.setFontSize(12)
-    doc.text("Module Descriptions:", 14, doc.autoTable.previous.finalY + 10)
-
-    doc.setFontSize(10)
-    let yPos = doc.autoTable.previous.finalY + 20
-    moduleDescriptions.forEach((description: string) => {
-      doc.text(description, 14, yPos)
-      yPos += 7
+      margin: { left: 10, right: 10 },
     })
 
     // Convert PDF to buffer
