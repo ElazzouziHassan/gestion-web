@@ -132,20 +132,33 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { cycleMaster, semester, dailySchedules } = await req.json()
+
+    if (!cycleMaster || !semester || !dailySchedules) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    if (!Array.isArray(dailySchedules)) {
+      return NextResponse.json({ error: "dailySchedules must be an array" }, { status: 400 })
+    }
+
     const client = await clientPromise
     const db = client.db(DB_NAME)
 
-    // Validate required fields
-    if (!cycleMaster || !semester || !Array.isArray(dailySchedules)) {
-      return NextResponse.json({ error: "Invalid input data" }, { status: 400 })
-    }
-
-    // Check if a schedule already exists for this semester
-    const existingSchedule = await db.collection("schedules").findOne({ semester: new ObjectId(semester) })
+    // Check if a schedule already exists for this cycle master and semester combination
+    const existingSchedule = await db.collection("schedules").findOne({
+      cycleMaster: new ObjectId(cycleMaster),
+      semester: new ObjectId(semester),
+    })
 
     if (existingSchedule) {
       return NextResponse.json(
-        { error: "A schedule already exists for this semester. Please update the existing schedule instead." },
+        {
+          error: "Un emploi du temps existe déjà pour ce cycle master et ce semestre.",
+          details: {
+            cycleMaster: existingSchedule.cycleMaster,
+            semester: existingSchedule.semester,
+          },
+        },
         { status: 409 },
       )
     }
@@ -160,6 +173,7 @@ export async function POST(req: Request) {
       })),
     }))
 
+    // Insert the new schedule
     const result = await db.collection("schedules").insertOne({
       cycleMaster: new ObjectId(cycleMaster),
       semester: new ObjectId(semester),
@@ -168,7 +182,7 @@ export async function POST(req: Request) {
       createdAt: new Date(),
     })
 
-    // Fetch the inserted document to return with populated fields
+    // Fetch the complete schedule with populated fields
     const insertedSchedule = await db
       .collection("schedules")
       .aggregate([
