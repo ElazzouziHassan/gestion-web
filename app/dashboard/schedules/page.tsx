@@ -1,13 +1,13 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Download, Plus, Trash, Clock } from "lucide-react"
+import { Download, Plus, Trash, Clock, Edit } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -42,7 +42,7 @@ type Professor = {
   _id: string
   firstName: string
   lastName: string
-  modules: string[]
+  modules?: string[] // Make modules optional
 }
 
 type DailySchedule = {
@@ -72,6 +72,13 @@ type Schedule = {
   dailySchedules: DailySchedule[]
   schedule_pdf: string | null
 }
+
+// Add these type definitions at the top of the file, after the existing types
+type ScheduleResponse = Schedule[]
+type CycleMasterResponse = CycleMaster[]
+type SemesterResponse = Semester[]
+type ModuleResponse = Module[]
+type ProfessorResponse = Professor[]
 
 const TIME_SLOTS = [
   { id: "1", time: "08:30-10:00", label: "8h30 - 10h00" },
@@ -103,45 +110,61 @@ export default function SchedulesPage() {
   const [timeConflicts, setTimeConflicts] = useState<{ [key: string]: boolean }>({})
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null)
   const [filteredModules, setFilteredModules] = useState<Module[]>([])
+  const [isEditing, setIsEditing] = useState(false)
+  const [editingScheduleId, setEditingScheduleId] = useState<string>("")
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean
+    scheduleId: string
+    onConfirm: () => void
+    onCancel: () => void
+  }>({
+    isOpen: false,
+    scheduleId: "",
+    onConfirm: () => {},
+    onCancel: () => {},
+  })
+
+  // Replace the fetchData function with this updated version
+  const fetchData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const [schedulesRes, cycleMastersRes, semestersRes, modulesRes, professorsRes] = await Promise.all([
+        fetch("/api/schedules"),
+        fetch("/api/cycle-masters"),
+        fetch("/api/semesters"),
+        fetch("/api/modules"),
+        fetch("/api/professors"),
+      ])
+
+      const [schedulesData, cycleMastersData, semestersData, modulesData, professorsData] = await Promise.all([
+        schedulesRes.json() as Promise<ScheduleResponse>,
+        cycleMastersRes.json() as Promise<CycleMasterResponse>,
+        semestersRes.json() as Promise<SemesterResponse>,
+        modulesRes.json() as Promise<ModuleResponse>,
+        professorsRes.json() as Promise<ProfessorResponse>,
+      ])
+
+      setSchedules(schedulesData)
+      setCycleMasters(cycleMastersData)
+      setSemesters(semestersData)
+      setModules(modulesData)
+      setProfessors(professorsData)
+      setFilteredModules(modulesData)
+    } catch (error) {
+      console.error("Erreur lors de la récupération des données:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données. Veuillez réessayer.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true)
-      try {
-        const [schedulesRes, cycleMastersRes, semestersRes, modulesRes, professorsRes] = await Promise.all([
-          fetch("/api/schedules"),
-          fetch("/api/cycle-masters"),
-          fetch("/api/semesters"),
-          fetch("/api/modules"),
-          fetch("/api/professors"),
-        ])
-        const [schedulesData, cycleMastersData, semestersData, modulesData, professorsData] = await Promise.all([
-          schedulesRes.json(),
-          cycleMastersRes.json(),
-          semestersRes.json(),
-          modulesRes.json(),
-          professorsRes.json(),
-        ])
-
-        setSchedules(schedulesData)
-        setCycleMasters(cycleMastersData)
-        setSemesters(semestersData)
-        setModules(modulesData)
-        setProfessors(professorsData)
-        setFilteredModules(modulesData)
-      } catch (error) {
-        console.error("Erreur lors de la récupération des données:", error)
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les données. Veuillez réessayer.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
     fetchData()
-  }, [])
+  }, [fetchData])
 
   // Update the handleAddSchedule function to handle the 409 error
   const handleAddSchedule = async (e: React.FormEvent) => {
@@ -155,8 +178,11 @@ export default function SchedulesPage() {
       return
     }
     try {
-      const response = await fetch("/api/schedules", {
-        method: "POST",
+      const url = isEditing ? `/api/schedules/${editingScheduleId}` : "/api/schedules"
+      const method = isEditing ? "PUT" : "POST"
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -164,36 +190,43 @@ export default function SchedulesPage() {
       })
 
       if (response.ok) {
-        const addedSchedule = await response.json()
-        setSchedules((prev) => [...prev, addedSchedule])
+        const data = await response.json()
+        if (isEditing) {
+          setSchedules((prev) => prev.map((schedule) => (schedule._id === editingScheduleId ? data : schedule)))
+          toast({
+            title: "Succès",
+            description: "Emploi du temps mis à jour avec succès",
+          })
+        } else {
+          setSchedules((prev) => [...prev, data])
+          toast({
+            title: "Succès",
+            description: "Emploi du temps ajouté avec succès",
+          })
+        }
         setIsAddScheduleOpen(false)
         setNewSchedule({
           cycleMaster: "",
           semester: "",
           dailySchedules: DAYS_OF_WEEK.map((day) => ({ day, sessions: [] })),
         })
-        toast({
-          title: "Succès",
-          description: "Emploi du temps ajouté avec succès",
-        })
+        setIsEditing(false)
+        setEditingScheduleId("")
       } else if (response.status === 409) {
         const data = await response.json()
         toast({
           title: "Emploi du temps existant",
-          description:
-            "Un emploi du temps existe déjà pour ce cycle master et ce semestre. Veuillez modifier l'emploi du temps existant.",
+          description: "Un emploi du temps existe déjà pour ce cycle master et ce semestre.",
           variant: "destructive",
         })
       } else {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Erreur lors de l'ajout de l'emploi du temps")
+        throw new Error("Failed to save schedule")
       }
     } catch (error) {
-      console.error("Erreur lors de l'ajout de l'emploi du temps:", error)
+      console.error("Error saving schedule:", error)
       toast({
         title: "Erreur",
-        description:
-          error instanceof Error ? error.message : "Erreur lors de l'ajout de l'emploi du temps. Veuillez réessayer.",
+        description: "Une erreur est survenue lors de l'enregistrement de l'emploi du temps.",
         variant: "destructive",
       })
     }
@@ -242,6 +275,7 @@ export default function SchedulesPage() {
     }))
   }
 
+  // Update the updateSession function to properly handle professor modules
   const updateSession = (
     day: string,
     sessionIndex: number,
@@ -256,24 +290,45 @@ export default function SchedulesPage() {
             ? {
                 ...schedule,
                 sessions: schedule.sessions.map((session, index) =>
-                  index === sessionIndex ? { ...session, [field]: value } : session,
+                  index === sessionIndex
+                    ? {
+                        ...session,
+                        [field]: value,
+                        // Reset module when changing professor
+                        ...(field === "professor" && {
+                          module: { _id: "", title: "", code: "" },
+                        }),
+                      }
+                    : session,
                 ),
               }
             : schedule,
         ) || [],
     }))
 
-
-    // uncomment this bellow and fix it to give you only the modules asigned to the selected professor!
-
-    // if (field === "professor" && typeof value === "object" && "_id" in value) {
-    //   const selectedProfessor = professors.find((p) => p._id === value._id)
-    //   if (selectedProfessor) {
-    //     const professorModules = modules.filter((m) => selectedProfessor.modules.includes(m._id))
-    //     setFilteredModules(professorModules)
-    //   }
-    // }
+    // Update filtered modules when professor is selected
+    if (field === "professor" && typeof value === "object" && "_id" in value) {
+      const selectedProfessor = professors.find((p) => p._id === value._id)
+      if (selectedProfessor) {
+        // Get all modules assigned to the selected professor
+        const professorModules = modules.filter((module) => {
+          const professor = professors.find((p) => p._id === value._id)
+          return professor?.modules?.includes(module._id)
+        })
+        setFilteredModules(professorModules.length > 0 ? professorModules : modules)
+      } else {
+        // Reset filtered modules if no professor is selected
+        setFilteredModules([])
+      }
+    }
   }
+
+  // Add this effect to reset filtered modules when opening the dialog
+  useEffect(() => {
+    if (isAddScheduleOpen) {
+      setFilteredModules(modules)
+    }
+  }, [isAddScheduleOpen, modules])
 
   const handleDownload = (pdfUrl: string | null) => {
     if (pdfUrl) {
@@ -306,6 +361,7 @@ export default function SchedulesPage() {
     return `${professor.firstName} ${professor.lastName}`
   }
 
+  // Update the ScheduleList component to include delete functionality
   const ScheduleList = ({ schedules }: { schedules: Schedule[] }) => {
     const groupedSchedules = schedules.reduce(
       (acc, schedule) => {
@@ -318,6 +374,54 @@ export default function SchedulesPage() {
       {} as Record<string, Record<string, Schedule>>,
     )
 
+    const handleEdit = (schedule: Schedule) => {
+      setNewSchedule({
+        ...schedule,
+        cycleMaster: schedule.cycleMaster.toString(),
+        semester: schedule.semester.toString(),
+      })
+      setIsEditing(true)
+      setEditingScheduleId(schedule._id)
+      setIsAddScheduleOpen(true)
+    }
+
+    const handleDelete = async (scheduleId: string) => {
+      const confirmed = await new Promise((resolve) => {
+        setDeleteConfirmation({
+          isOpen: true,
+          scheduleId,
+          onConfirm: () => resolve(true),
+          onCancel: () => resolve(false),
+        })
+      })
+
+      if (confirmed) {
+        try {
+          const response = await fetch(`/api/schedules/${scheduleId}`, {
+            method: "DELETE",
+          })
+
+          if (response.ok) {
+            setSchedules((prev) => prev.filter((schedule) => schedule._id !== scheduleId))
+            toast({
+              title: "Succès",
+              description: "L'emploi du temps a été supprimé avec succès",
+            })
+          } else {
+            throw new Error("Failed to delete schedule")
+          }
+        } catch (error) {
+          console.error("Error deleting schedule:", error)
+          toast({
+            title: "Erreur",
+            description: "Impossible de supprimer l'emploi du temps. Veuillez réessayer.",
+            variant: "destructive",
+          })
+        }
+      }
+      setDeleteConfirmation({ isOpen: false, scheduleId: "", onConfirm: () => {}, onCancel: () => {} })
+    }
+
     return (
       <div className="space-y-6">
         {Object.entries(groupedSchedules).map(([cycleMasterId, semesters]) => (
@@ -329,13 +433,19 @@ export default function SchedulesPage() {
             <CardContent>
               <div className="space-y-2">
                 {Object.values(semesters).map((schedule) => (
-                  <div key={schedule._id} className="flex justify-between items-center">
+                  <div key={schedule._id} className="flex items-center space-x-2">
                     <Button
                       variant="outline"
-                      className="w-full justify-start mr-2"
+                      className="flex-1 justify-start"
                       onClick={() => openScheduleDetails(schedule)}
                     >
                       {schedule.semesterTitle}
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => handleEdit(schedule)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => handleDelete(schedule._id)}>
+                      <Trash className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
@@ -436,6 +546,33 @@ export default function SchedulesPage() {
     )
   }
 
+  // Add DeleteConfirmationDialog component
+  const DeleteConfirmationDialog = () => {
+    return (
+      <Dialog
+        open={deleteConfirmation.isOpen}
+        onOpenChange={() => setDeleteConfirmation({ ...deleteConfirmation, isOpen: false })}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer cet emploi du temps ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => deleteConfirmation.onCancel()}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={() => deleteConfirmation.onConfirm()}>
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -453,8 +590,14 @@ export default function SchedulesPage() {
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Ajouter un Nouvel Emploi du Temps</DialogTitle>
-              <DialogDescription>Remplissez les informations pour ajouter un nouvel emploi du temps.</DialogDescription>
+              <DialogTitle>
+                {isEditing ? "Modifier l'Emploi du Temps" : "Ajouter un Nouvel Emploi du Temps"}
+              </DialogTitle>
+              <DialogDescription>
+                {isEditing
+                  ? "Modifiez les informations pour mettre à jour l'emploi du temps."
+                  : "Remplissez les informations pour ajouter un nouvel emploi du temps."}
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleAddSchedule}>
               <div className="grid gap-6">
@@ -703,7 +846,7 @@ export default function SchedulesPage() {
                 </Card>
               </div>
               <DialogFooter className="mt-6">
-                <Button type="submit">Ajouter l'Emploi du Temps</Button>
+                <Button type="submit">{isEditing ? "Mettre à jour" : "Ajouter"} l'Emploi du Temps</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -727,6 +870,7 @@ export default function SchedulesPage() {
       </Card>
 
       <ScheduleDetailsDialog schedule={selectedSchedule} onClose={() => setSelectedSchedule(null)} />
+      <DeleteConfirmationDialog />
     </div>
   )
 }
